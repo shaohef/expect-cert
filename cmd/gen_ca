@@ -1,0 +1,78 @@
+#!/usr/bin/expect -f
+
+# global ::env
+
+# set capath cert/ca
+# set serverpath cert/server
+# set clientpath cert/client
+set capath $::env(CAPATH)
+set serverpath $::env(SERVERPATH)
+set clientpath $::env(CLIENTPATH)
+
+# set phrasepass 123456
+# set country  CN
+# set state BeiJing
+# set city BeiJing
+# set company OpenSource
+# set company_unit RMD
+# # set common_name env($HOSTNAME)
+# set common_name [exec hostname]
+# puts "set CN: $common_name"
+# set pipe [exec cat "/etc/resolv.conf" ]
+# set pipe [exec grep search << $pipe]
+# set SAN_DNS [exec sed -e "s/search /DNS:/g" << $pipe]
+# puts "get SAN_DNS: $SAN_DNS"
+# set caemail "rmd@intel.com"
+# # set v [exec cat /home/a | grep "work" | awk -F {=} {{print $2}}]
+
+set phrasepass $::env(PHRASEPASS)
+set country  $::env(COUNTRY)
+set state $::env(STATE)
+set city $::env(CITY)
+set company $::env(COMPANY)
+set company_unit $::env(COMPANY_UNIT)
+# set common_name env($HOSTNAME)
+set common_name $::env(COMMON_NAME)
+puts "set CN: $common_name"
+set SAN_DNS $::env(SAN_DNS)
+puts "get SAN_DNS: $SAN_DNS"
+set caemail $::env(CAEMAIL)
+
+spawn openssl genrsa -aes256 -out $capath/ca-key.pem 4096
+expect {
+ "*pass phrase*:" { send "$phrasepass\r" }
+}
+expect {
+ "*Verifying*pass phrase *:" { send "$phrasepass\r" }
+}
+
+spawn openssl req -new -x509 -days 365 -key $capath/ca-key.pem -sha256 -out $capath/ca.pem
+expect {
+ "*pass phrase*:" { send "$phrasepass\r" }
+}
+expect {
+ "*Country Name*:" { send "$country\r" }
+}
+
+expect {
+ "*State or Province Name*:" { send "$state\r" }
+}
+expect {
+ "*Locality Name*:" { send "$city\r" }
+}
+expect {
+ "*Organization Name*:" { send "$company\r" }
+}
+expect {
+ "*Organizational Unit Name*:" { send "$company_unit\r" }
+}
+expect {
+ "*Common Name*:" { send "$common_name\r" }
+}
+expect {
+ "*Email Address*" { send "$caemail\r\n" }
+}
+puts "$caemail\r\n"
+
+expect eof
+# interact

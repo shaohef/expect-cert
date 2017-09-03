@@ -1,0 +1,110 @@
+#!/bin/bash
+
+set -x
+rm -f *.pem
+rm -f *.csr
+rm -f *.srl
+rm -rf cert
+
+export CAPATH=.
+export SERVERPATH=.
+export CLIENTPATH=.
+
+export PHRASEPASS=123456
+export COUNTRY=CN
+export STATE=BeiJing
+export CITY=BeiJing
+export COMPANY=OpenSource
+export COMPANY_UNIT=RMD
+export CAEMAIL="rmd@intel.com"
+
+export SERVERCN=$HOSTNAME
+export CLIENTCN=Admin
+export COMMON_NAME=$HOSTNAME
+export SAN_DNS=`cat "/etc/resolv.conf" | grep search | sed -e "s/search /DNS:/g"`
+echo "get SAN_DNS: $SAN_DNS"
+
+echo "Config CA"
+./cmd/gen_ca
+
+# {
+# /usr/bin/expect << EOF
+# spawn openssl genrsa -aes256 -out $CAPATH/ca-key.pem 4096
+# expect {
+#  "*pass phrase*:" { send "$PHRASEPASS\r" }
+# }
+# expect {
+#  "*Verifying*pass phrase *:" { send "$PHRASEPASS\r" }
+# }
+# EOF
+# }
+#
+# {
+# /usr/bin/expect << EOF
+# spawn openssl req -new -x509 -days 365 -key $CAPATH/ca-key.pem -sha256 -out $CAPATH/ca.pem
+# expect "*pass phrase*:"
+# send "$PHRASEPASS\r"
+# expect "*Country Name*:"
+# send "$COUNTRY\r"
+# expect "*State or Province Name*:"
+# send "$STATE\r"
+# expect "*Locality Name*:"
+# send "$CITY\r"
+# expect "*Organization Name*:"
+# send "$COMPANY\r"
+# expect "*Organizational Unit Name*:"
+# send "$COMPANY_UNIT\r"
+# expect "*Common Name*:"
+# send "$COMMON_NAME\r"
+# expect "*Email Address*"
+# send "$CAEMAIL\r\n"
+# EOF
+# }
+
+echo "Config Server"
+openssl genrsa -out $SERVERPATH/rmd-key.pem 4096
+echo "generate Server CSR"
+openssl req -subj "/CN=$SERVERCN" -sha256 -new -key $SERVERPATH/rmd-key.pem -out $SERVERPATH/rmd.csr
+
+echo "generate Server Cert"
+echo "subjectAltName = $SAN_DNS,IP:127.0.0.1" > $SERVERPATH/extfile.cnf
+{
+/usr/bin/expect << EOF
+spawn openssl x509 -req -days 365 -sha256 -in rmd.csr -CA $CAPATH/ca.pem -CAkey $CAPATH/ca-key.pem \
+                   -CAcreateserial -out $SERVERPATH/rmd-cert.pem -extfile $SERVERPATH/extfile.cnf
+expect "*pass phrase*"
+send "$PHRASEPASS\r"
+EOF
+}
+
+# client
+echo "Config Client"
+openssl genrsa -out key.pem 4096
+openssl req -subj '/CN=$CLIENTCN' -new -key key.pem -out client.csr
+echo "extendedKeyUsage = clientAuth" > extfile.cnf
+
+{
+/usr/bin/expect << EOF
+spawn openssl x509 -req -days 365 -sha256 -in client.csr -CA $CAPATH/ca.pem -CAkey $CAPATH/ca-key.pem \
+                  -CAcreateserial -out $CLIENTPATH/cert.pem -extfile $CLIENTPATH/extfile.cnf
+expect "*pass phrase*"
+send "$PHRASEPASS\r"
+EOF
+}
+# other
+rm -v client.csr rmd.csr
+chmod -v 0400 ca-key.pem key.pem rmd-key.pem
+chmod -v 0444 ca.pem rmd-cert.pem cert.pem
+
+CAPATH=cert/ca
+SERVERPATH=cert/server
+CLIENTPATH=cert/client
+mkdir -p $CAPATH
+mkdir -p $SERVERPATH
+mkdir -p $CLIENTPATH
+
+mv rmd-cert.pem rmd-key.pem $SERVERPATH
+cp ca.pem $SERVERPATH
+mv cert.pem key.pem $CLIENTPATH
+cp ca.pem $CLIENTPATH
+mv ca-key.pem ca.pem $CAPATH
