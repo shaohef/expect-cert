@@ -70,6 +70,7 @@ openssl req -subj "/CN=$SERVERCN" -sha256 -new -key $SERVERPATH/rmd-key.pem -out
 
 echo "generate Server Cert"
 echo "subjectAltName = $SAN_DNS,IP:127.0.0.1" > $SERVERPATH/extfile.cnf
+echo extendedKeyUsage = serverAuth >> extfile.cnf
 {
 /usr/bin/expect << EOF
 spawn openssl x509 -req -days 365 -sha256 -in rmd.csr -CA $CAPATH/ca.pem -CAkey $CAPATH/ca-key.pem \
