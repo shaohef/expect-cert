@@ -39,6 +39,18 @@ expect {
 expect eof
 EOF
 }
+# remove key password.
+# openssl rsa -in ca-key.pem -out ca-key.pem
+
+{
+/usr/bin/expect << EOF
+spawn openssl rsa -noout -text -in $CAPATH/ca-key.pem
+expect {
+ "*Enter pass phrase for*" { send "$PHRASEPASS\r" }
+}
+expect eof
+EOF
+}
 
 {
 /usr/bin/expect << EOF
@@ -62,11 +74,13 @@ send "$CAEMAIL\r\n"
 expect eof
 EOF
 }
+openssl x509 -noout -text -in $CAPATH/ca.pem
 
 echo "Config Server"
 openssl genrsa -out $SERVERPATH/rmd-key.pem 4096
 echo "generate Server CSR"
 openssl req -subj "/CN=$SERVERCN" -sha256 -new -key $SERVERPATH/rmd-key.pem -out $SERVERPATH/rmd.csr
+openssl req -noout -text -in $SERVERPATH/rmd.csr
 
 echo "generate Server Cert"
 echo "subjectAltName = $SAN_DNS,IP:127.0.0.1" > $SERVERPATH/extfile.cnf
@@ -80,11 +94,14 @@ send "$PHRASEPASS\r"
 expect eof
 EOF
 }
+openssl x509 -noout -text -in $SERVERPATH/rmd-cert.pem
+openssl verify -CAfile $CAPATH/ca.pem $SERVERPATH/rmd-cert.pem
 
 # client
 echo "Config Client"
 openssl genrsa -out key.pem 4096
-openssl req -subj '/CN=$CLIENTCN' -new -key key.pem -out client.csr
+openssl req -subj "/CN=$CLIENTCN" -new -key key.pem -out client.csr
+openssl req -noout -text -in client.csr
 echo "extendedKeyUsage = clientAuth" > extfile.cnf
 
 {
@@ -96,6 +113,9 @@ send "$PHRASEPASS\r"
 expect eof
 EOF
 }
+openssl x509 -noout -text -in $CLIENTPATH/cert.pem
+openssl verify -CAfile $CAPATH/ca.pem $CLIENTPATH/cert.pem
+
 # other
 rm -v client.csr rmd.csr
 chmod -v 0400 ca-key.pem key.pem rmd-key.pem
@@ -113,3 +133,17 @@ cp ca.pem $SERVERPATH
 mv cert.pem key.pem $CLIENTPATH
 cp ca.pem $CLIENTPATH
 mv ca-key.pem ca.pem $CAPATH
+
+# Set a unused random port
+CHECK="do while"
+
+while [[ ! -z $CHECK ]]; do
+    PORT=$(( ( RANDOM % 60000 )  + 1025 ))
+    CHECK=$(sudo netstat -ap | grep $PORT)
+done
+
+sudo openssl s_server -accept $PORT -CAfile $CAPATH/ca.pem -cert $SERVERPATH/rmd-cert.pem -key $SERVERPATH/rmd-key.pem -www &
+sleep 1
+openssl s_client -CAfile $CAPATH/ca.pem -cert $CLIENTPATH/cert.pem -key $CLIENTPATH/key.pem -connect localhost:$PORT </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > server-cert.pem
+openssl x509 -noout -text -in server-cert.pem
+rm server-cert.pem
