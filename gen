@@ -74,6 +74,7 @@ spawn openssl x509 -req -days 365 -sha256 -in rmd.csr -CA $CAPATH/ca.pem -CAkey 
                    -CAcreateserial -out $SERVERPATH/rmd-cert.pem -extfile $SERVERPATH/extfile.cnf
 expect "*pass phrase*"
 send "$PHRASEPASS\r"
+expect eof
 EOF
 }
 
@@ -89,6 +90,7 @@ spawn openssl x509 -req -days 365 -sha256 -in client.csr -CA $CAPATH/ca.pem -CAk
                   -CAcreateserial -out $CLIENTPATH/cert.pem -extfile $CLIENTPATH/extfile.cnf
 expect "*pass phrase*"
 send "$PHRASEPASS\r"
+expect eof
 EOF
 }
 # other
