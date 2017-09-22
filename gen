@@ -25,41 +25,43 @@ export SAN_DNS=`cat "/etc/resolv.conf" | grep search | sed -e "s/search /DNS:/g"
 echo "get SAN_DNS: $SAN_DNS"
 
 echo "Config CA"
-./cmd/gen_ca
+# ./cmd/gen_ca
 
-# {
-# /usr/bin/expect << EOF
-# spawn openssl genrsa -aes256 -out $CAPATH/ca-key.pem 4096
-# expect {
-#  "*pass phrase*:" { send "$PHRASEPASS\r" }
-# }
-# expect {
-#  "*Verifying*pass phrase *:" { send "$PHRASEPASS\r" }
-# }
-# EOF
-# }
-#
-# {
-# /usr/bin/expect << EOF
-# spawn openssl req -new -x509 -days 365 -key $CAPATH/ca-key.pem -sha256 -out $CAPATH/ca.pem
-# expect "*pass phrase*:"
-# send "$PHRASEPASS\r"
-# expect "*Country Name*:"
-# send "$COUNTRY\r"
-# expect "*State or Province Name*:"
-# send "$STATE\r"
-# expect "*Locality Name*:"
-# send "$CITY\r"
-# expect "*Organization Name*:"
-# send "$COMPANY\r"
-# expect "*Organizational Unit Name*:"
-# send "$COMPANY_UNIT\r"
-# expect "*Common Name*:"
-# send "$COMMON_NAME\r"
-# expect "*Email Address*"
-# send "$CAEMAIL\r\n"
-# EOF
-# }
+{
+/usr/bin/expect << EOF
+spawn openssl genrsa -aes256 -out $CAPATH/ca-key.pem 4096
+expect {
+ "*pass phrase*:" { send "$PHRASEPASS\r" }
+}
+expect {
+ "*Verifying*pass phrase *:" { send "$PHRASEPASS\r" }
+}
+expect eof
+EOF
+}
+
+{
+/usr/bin/expect << EOF
+spawn openssl req -new -x509 -days 365 -key $CAPATH/ca-key.pem -sha256 -out $CAPATH/ca.pem
+expect "*pass phrase*:"
+send "$PHRASEPASS\r"
+expect "*Country Name*:"
+send "$COUNTRY\r"
+expect "*State or Province Name*:"
+send "$STATE\r"
+expect "*Locality Name*:"
+send "$CITY\r"
+expect "*Organization Name*:"
+send "$COMPANY\r"
+expect "*Organizational Unit Name*:"
+send "$COMPANY_UNIT\r"
+expect "*Common Name*:"
+send "$COMMON_NAME\r"
+expect "*Email Address*"
+send "$CAEMAIL\r\n"
+expect eof
+EOF
+}
 
 echo "Config Server"
 openssl genrsa -out $SERVERPATH/rmd-key.pem 4096
