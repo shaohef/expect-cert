@@ -142,7 +142,7 @@ while [[ ! -z $CHECK ]]; do
     CHECK=$(sudo netstat -ap | grep $PORT)
 done
 
-sudo openssl s_server -accept $PORT -CAfile $CAPATH/ca.pem -cert $SERVERPATH/rmd-cert.pem -key $SERVERPATH/rmd-key.pem -www &
+sudo openssl s_server -debug -msg -Verify 2 -accept $PORT -CAfile $CAPATH/ca.pem -cert $SERVERPATH/rmd-cert.pem -key $SERVERPATH/rmd-key.pem -www &
 sleep 1
 openssl s_client -CAfile $CAPATH/ca.pem -cert $CLIENTPATH/cert.pem -key $CLIENTPATH/key.pem -connect localhost:$PORT </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > server-cert.pem
 openssl x509 -noout -text -in server-cert.pem
