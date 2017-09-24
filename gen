@@ -157,6 +157,6 @@ which go
 if [ $? -eq 0 ]; then
     echo "--------------------------------------------------"
     echo "Support Golang env."
-    go run cmd/verify_cert.go -ca $CAPATH/ca.pem -cert $CLIENTPATH/cert.pem  -verify $CLIENTCN
-    go run cmd/verify_cert.go -ca $CAPATH/ca.pem -cert $SERVERPATH/rmd-cert.pem  -verify $SAN_DNS
+    go run cmd/verify_cert.go -ca $CAPATH/ca.pem -cert $CLIENTPATH/cert.pem  -dns $CLIENTCN
+    go run cmd/verify_cert.go -ca $CAPATH/ca.pem -cert $SERVERPATH/rmd-cert.pem  -dns ${SAN_DNS#DNS:}
 fi
