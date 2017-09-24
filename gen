@@ -147,3 +147,16 @@ sleep 1
 openssl s_client -CAfile $CAPATH/ca.pem -cert $CLIENTPATH/cert.pem -key $CLIENTPATH/key.pem -connect localhost:$PORT </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > server-cert.pem
 openssl x509 -noout -text -in server-cert.pem
 rm server-cert.pem
+
+echo "*************************************************************"
+echo "handshake_failure should error"
+openssl s_client -CAfile $CAPATH/ca.pem -cert cert.crt -key private.key -connect localhost:$PORT </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > server-cert.pem
+# openssl s_client -CAfile $CAPATH/ca.pem -connect localhost:$PORT </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > server-cert.pem
+
+which go
+if [ $? -eq 0 ]; then
+    echo "--------------------------------------------------"
+    echo "Support Golang env."
+    go run cmd/verify_cert.go -ca $CAPATH/ca.pem -cert $CLIENTPATH/cert.pem  -verify $CLIENTCN
+    go run cmd/verify_cert.go -ca $CAPATH/ca.pem -cert $SERVERPATH/rmd-cert.pem  -verify $SAN_DNS
+fi
